@@ -1,12 +1,3 @@
-/*
-1) 학생 입력(수시 추가가능)
-2) 전체 학생 리스트
-3) 이름으로 검색
-4) 학생 정보 수정
-5) 삭제
-6) 종료
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,27 +17,84 @@ typedef struct
 	int birthYear;
 } Student;
 
-void addInfo(Student studentList[MAX_SIZE])
+//////////////// 리스트 구현
+#define LIST_TYPE Student
+typedef struct ListNode
 {
-	printf("Add Info\n");
+	LIST_TYPE data;
+	struct ListNode* next;
+} ListNode;
+typedef struct List
+{
+	ListNode* firstNode;
+	ListNode* endNode;
+	int len;
+} List;
+List* create_List()
+{
+	List* header = (List*)malloc(sizeof(List));
+	header->firstNode		= (ListNode*)malloc(sizeof(ListNode));
+	header->endNode			= (ListNode*)malloc(sizeof(ListNode));
+	header->firstNode->next = header->endNode;
+	header->endNode = NULL;
+	header->len = 0;
+	return header;
 }
-void showInfoAll(Student studentList[MAX_SIZE])
+ListNode* endCheck_List(List* list, ListNode* node)
 {
-	printf("Show Info ALL\n");
+	if (node == list->endNode)
+	{
+		return NULL;
+	}
+	return node;
 }
-void searchInfoByName(Student studentList[MAX_SIZE])
+ListNode* access_List(List* list, int index)
 {
-	printf("Search Info By Name\n");
+	ListNode* node = list->firstNode;
+	for (int i = 0; i < index+1; i++)
+	{
+		node = node->next;
+	}
+	return endCheck_List(list, node);
 }
-void editInfoByStdNum(Student studentList[MAX_SIZE])
+void pushBack_List(List* list, const LIST_TYPE data)
 {
-	printf("Edit Info\n");
+	ListNode* newNode = (ListNode*)malloc(sizeof(ListNode));
+	newNode->data = data;
+	ListNode* preNode = access_List(list, list->len - 1);
+	newNode->next = preNode->next;
+	preNode->next = newNode;
+	++list->len;
 }
-void deleteInfoByStdNum(Student studentList[MAX_SIZE])
+LIST_TYPE getData_List(List* list, int index)
 {
-	printf("Del Info\n");
+	return access_List(list, index)->data;
+}
+void setData_List(List* list, int index, LIST_TYPE data)
+{
+	access_List(list, index)->data = data;
+}
+void deleteNode_List(List* list, int index)
+{
+	ListNode* preNode = access_List(list, index - 1);
+	ListNode* delNode = preNode->next;
+	preNode->next = preNode->next->next;
+	free(delNode);
+	--list->len;
+}
+List* destroy_List(List* list)
+{
+	for (int i = 0; i < list->len; i++)
+	{
+		deleteNode_List(list, 0);
+	}
+	free(list->endNode);
+	free(list->firstNode);
+	free(list);
+	return NULL;
 }
 
+//////////////// 유틸리티 함수 구현부
 int getInt(const char* str)
 {
 	int n;
@@ -57,48 +105,175 @@ int getInt(const char* str)
 	scanf("%d", &n);
 	return n;
 }
-void printMenu(const char funcInfo[][30], const int funcInfoLen, const int endIndex)
+void getStr(char* getStr, const char* str)
+{
+	if (strcmp(str, ""))
+	{
+		printf("%s", str);
+	}
+	scanf("%s", getStr);
+}
+
+//////////////// 파일 입출력 함수
+int openFile(const char* url, int flag)
+{
+	int fd;
+	fd = (flag & O_CREAT) ? open(url, flag, 0644) : open(url, flag);
+	if (fd != -1)
+	{
+		return fd;
+	}
+	printf("Failed Open\n");
+}
+void writeFile(const int fd, const Student data)
+{
+	write(fd, &data, sizeof(data));
+}
+int loadFile(const int fd, Student* stdnt)
+{
+	return read(fd, stdnt, sizeof(*stdnt));
+}
+void closeFile(int* fd)
+{
+	close(*fd);
+	*fd = 0;
+}
+
+void writeListAllFile(const char* url, List* list)
+{
+	int fd = openFile(url, O_WRONLY | O_CREAT | O_TRUNC);
+	lseek(fd, 0, SEEK_SET);
+	for (int i = 0; i < list->len; i++)
+	{
+		writeFile(fd, getData_List(list, i));
+	}
+	closeFile(&fd);
+}
+void loadListAllFile(const char* url, List* list)
+{
+	Student student;
+	int fd = openFile(url, O_RDONLY | O_CREAT);
+	while (loadFile(fd, &student) > 0)
+	{
+		pushBack_List(list, student);
+	}
+	closeFile(&fd);
+}
+
+//////////////// 기능 구현용 서브 함수 구현부
+Student setStudent()
+{
+	Student stdt;
+	stdt.std_num = getInt("Student Number : ");
+	getStr(stdt.name, "Name : ");
+	getStr(stdt.addr, "Address : ");
+	stdt.tuition = getInt("Tuition : ");
+	stdt.birthYear = getInt("Birth Year (YYYY) : ");
+	return stdt;
+}
+void showStudentInfo(const Student data)
+{
+	printf("%d %s %s %d %d\n", data.std_num, data.name, data.addr, data.tuition, data.birthYear);
+}
+
+//////////////// 기능 구현부 
+void addInfo(List* list)
+{
+	pushBack_List(list, setStudent());
+}
+void showInfoAll(List* list)
+{
+	for (int i = 0; i < list->len; i++)
+	{
+		showStudentInfo(getData_List(list, i));
+	}
+}
+void searchInfoByName(List* list)
+{
+	Student student;
+	char name[30];
+	getStr(name, "검색할 이름 : ");
+	for (int i = 0; i < list->len; i++)
+	{
+		student = getData_List(list, i);
+		if (!strcmp(name, student.name))
+		{
+			showStudentInfo(student);
+		}
+	}
+}
+void editInfoByStdNum(List* list)
+{
+	Student student;
+	int studentNumber = getInt("학번 : ");
+	for (int i = 0; i < list->len; i++)
+	{
+		student = getData_List(list, i);
+		if (studentNumber == student.std_num)
+		{
+			setData_List(list, i, setStudent());
+			return;
+		}
+	}
+}
+void deleteInfoByStdNum(List* list)
+{
+	Student student;
+	int studentNumber = getInt("학번 : ");
+	for (int i = 0; i < list->len; i++)
+	{
+		student = getData_List(list, i);
+		if (studentNumber == student.std_num)
+		{
+			deleteNode_List(list, i);
+		}
+	}
+}
+
+//////////////// 메뉴 구현부
+typedef struct
+{
+	const char funcInfo[30];
+	void(*funcs)(List* list);
+} Func;
+
+void printMenu(const Func func[], const int funcInfoLen, const int endIndex)
 {
 	for (int i = 0; i < funcInfoLen; i++)
 	{
-		printf("%d) %s\n", i + 1, funcInfo[i]);
+		printf("%d) %s\n", i + 1, func[i].funcInfo);
 	}
 	printf("%d) End\n", endIndex);
 }
-int runFunc(void(*funcs[])(Student studentList[MAX_SIZE]), const int funcsLen, const int index, const int endIndex)
+int runFunc(const Func func[], const int funcsLen, const int index, const int endIndex, List* list)
 {
-	Student dump[MAX_SIZE];
 	if (index == endIndex)
 	{
 		return 2;
 	}
 	if (IN(index - 1, 0, funcsLen - 1))
 	{
-		funcs[index - 1](dump);
+		func[index - 1].funcs(list);
 		return 0;
 	}
 	return 1;
 }
-int menu(const int endIndex)
+int menu(List* list, const int endIndex)
 {
 	const int funcInfoLen = 5;
-	const char funcInfo[][30] = {
-		"New student info",
-		"Show all student info",
-		"Search by name",
-		"Edit student info",
-		"Delete student info",
+	const Func func[] = {
+		{"New student info",		addInfo},
+		{"Show all student info",	showInfoAll},
+		{"Search by name",			searchInfoByName},
+		{"Edit student info",		editInfoByStdNum},
+		{"Delete student info",		deleteInfoByStdNum},
 	};
-	void(*funcs[])(Student studentList[MAX_SIZE]) = {
-		addInfo,
-		showInfoAll,
-		searchInfoByName,
-		editInfoByStdNum,
-		deleteInfoByStdNum,
-	};
-	printMenu(funcInfo, funcInfoLen, endIndex);
+
+	printf("\n\n\n\n\n\n\n\n");
+
+	printMenu(func, funcInfoLen, endIndex);
 	int index = getInt("Input : ");
-	int result = runFunc(funcs, funcInfoLen, index, endIndex);
+	int result = runFunc(func, funcInfoLen, index, endIndex, list);
 	// 0-> return 0, 1->print, return 0, 2->return -1
 	if (result == 2)
 		return -1;
@@ -111,6 +286,13 @@ int menu(const int endIndex)
 int main()
 {
 	const int endIndex = 6;
-	while (menu(endIndex) == 0);
+	List* studentList = create_List();
+	const char url[50] = "C:/Users/USER/Desktop/test.txt";
+	loadListAllFile(url, studentList);
+
+	while (menu(studentList, endIndex) == 0);
+
+	writeListAllFile(url, studentList);
+	studentList = destroy_List(studentList);
 	printf("End\n");
 }
