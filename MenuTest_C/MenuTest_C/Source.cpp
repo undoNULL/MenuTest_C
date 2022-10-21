@@ -33,8 +33,8 @@ typedef struct List
 List* create_List()
 {
 	List* header = (List*)malloc(sizeof(List));
-	header->firstNode		= (ListNode*)malloc(sizeof(ListNode));
-	header->endNode			= (ListNode*)malloc(sizeof(ListNode));
+	header->firstNode = (ListNode*)malloc(sizeof(ListNode));
+	header->endNode = (ListNode*)malloc(sizeof(ListNode));
 	header->firstNode->next = header->endNode;
 	header->endNode = NULL;
 	header->len = 0;
@@ -51,7 +51,7 @@ ListNode* endCheck_List(List* list, ListNode* node)
 ListNode* access_List(List* list, int index)
 {
 	ListNode* node = list->firstNode;
-	for (int i = 0; i < index+1; i++)
+	for (int i = 0; i < index + 1; i++)
 	{
 		node = node->next;
 	}
@@ -288,7 +288,7 @@ int main()
 {
 	const int endIndex = 6;
 	List* studentList = create_List();
-	const char url[50] = "C:/Users/USER/Desktop/test.txt";
+	const char url[50] = "test.txt";
 	loadListAllFile(url, studentList);
 
 	while (menu(studentList, endIndex) == 0);
