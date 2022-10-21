@@ -124,6 +124,7 @@ int openFile(const char* url, int flag)
 		return fd;
 	}
 	printf("Failed Open\n");
+	return 0;
 }
 void writeFile(const int fd, const Student data)
 {
